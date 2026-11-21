@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JJD 감귤창 🍊</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; }
+  body { margin: 0; background: linear-gradient(135deg, #fff7ed, #fef3c7); color: #1f2937; }
+  .hidden { display: none !important; }
+  .center-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .card { background: #fff; border: 3px solid #fdba74; border-radius: 24px; padding: 24px; box-shadow: 0 10px 25px rgba(249,115,22,0.12); }
+  .login-box { width: 100%; max-width: 400px; text-align: center; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: #ffedd5; padding: 6px; border-radius: 16px; margin: 16px 0; }
+  .tab-btn { border: none; padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; background: transparent; color: #9a3412; font-size: 14px; }
+  .tab-btn.active { background: #f97316; color: #fff; }
+  .tab-btn.active.admin { background: #d97706; color: #fff; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 2px solid #fed7aa; border-radius: 12px; margin-bottom: 10px; font-size: 14px; }
+  .btn { border: none; padding: 11px 16px; border-radius: 14px; font-weight: bold; cursor: pointer; background: #f97316; color: #fff; font-size: 14px; }
+  .btn:hover { background: #ea580c; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 10px; }
+  .btn-red { background: #ef4444; }
+  .btn-green { background: #10b981; }
+  .btn-blue { background: #3b82f6; }
+  .btn-gray { background: #6b7280; }
+  header { background: #fff; border-bottom: 2px solid #fed7aa; padding: 12px 16px; position: sticky; top: 0; z-index: 20; }
+  .nav-top { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .nav-menu { max-width: 1000px; margin: 10px auto 0; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .nav-menu button { white-space: nowrap; border: none; padding: 8px 14px; border-radius: 14px; font-weight: bold; cursor: pointer; background: #ffedd5; color: #9a3412; }
+  .nav-menu button.active { background: #f97316; color: #fff; }
+  main { max-width: 1000px; margin: 16px auto; padding: 0 16px 60px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .badge-item { border: 3px solid #d1d5db; border-radius: 16px; padding: 12px; text-align: center; background: #f3f4f6; filter: grayscale(100%); opacity: 0.7; }
+  .badge-item.owned { border-color: #10b981; background: #ecfdf5; filter: none; opacity: 1; }
+  .pet-img { width: 96px; height: 96px; object-fit: contain; border-radius: 12px; background: #fff7ed; padding: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid #fed7aa; padding: 8px; text-align: left; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+</style>
+</head>
+<body>
+
+<div id="loginView" class="center-wrap">
+  <div class="card login-box">
+    <div style="font-size:48px;">🍊</div>
+    <h1 style="margin:6px 0; color:#ea580c;">JJD 감귤창</h1>
+    <p style="font-size:13px; color:#6b7280; margin-top:0;">우리 가족 전용 비밀 놀이터</p>
+
+    <div id="tabWrap" class="tabs">
+      <button type="button" id="tabMember" class="tab-btn active" onclick="switchLoginTab('member')">🌱 가족 회원</button>
+      <button type="button" id="tabAdmin" class="tab-btn" onclick="switchLoginTab('admin')">👑 관리자</button>
+    </div>
+
+    <div id="codeStep">
+      <input type="text" id="codeInput" placeholder="접속 코드를 입력하세요" onkeydown="if(event.key==='Enter') tryLogin()" />
+      <button type="button" class="btn" style="width:100%;" onclick="tryLogin()">입장하기 🚀</button>
+    </div>
+
+    <div id="nickStep" class="hidden">
+      <p style="font-size:13px; font-weight:bold; color:#b45309;">🎉 첫 방문 환영합니다! 사용할 닉네임을 입력하세요.</p>
+      <input type="text" id="nickInput" placeholder="예: 감귤대장" />
+      <button type="button" class="btn" style="width:100%;" onclick="saveFirstNick()">닉네임 저장 후 입장 🍊</button>
+    </div>
+    <p id="loginErr" style="color:#ef4444; font-size:13px; font-weight:bold; margin-top:10px;"></p>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+  <header>
+    <div class="nav-top">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:24px;">🍊</span>
+        <strong style="font-size:18px; color:#ea580c;">JJD 감귤창</strong>
+        <span id="roleBadge" style="font-size:12px; background:#ffedd5; color:#9a3412; padding:3px 8px; border-radius:99px; font-weight:bold;"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="background:#fef3c7; border:1px solid #fcd34d; padding:5px 12px; border-radius:99px; font-weight:bold; color:#92400e;">
+          💰 <span id="myCoins">0</span> 감귤
+        </span>
+        <strong id="myNickDisplay"></strong>
+        <button type="button" class="btn btn-sm btn-gray" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+    <div class="nav-menu" id="mainNav"></div>
+  </header>
+
+  <main>
+    <div id="noticeBar" class="card hidden" style="padding:12px 16px; background:#fef3c7; margin-bottom:16px; font-size:14px;"></div>
+    <div id="contentArea"></div>
+  </main>
+</div>
+
+<div id="popupModal" class="modal hidden">
+  <div class="card" style="max-width:360px; width:100%; text-align:center;">
+    <h2 id="popTitle" style="color:#ea580c; margin-top:0;"></h2>
+    <img id="popImg" class="pet-img hidden" style="width:140px; height:140px; margin:10px auto;" />
+    <p id="popSub" style="font-weight:bold;"></p>
+    <button type="button" class="btn" style="width:100%;" onclick="closePopup()">확인</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'jjd_gamgyul_db_v5';
+let currentLoginMode = 'member';
+let pendingCode = '';
+let currentUserCode = null;
+let currentSection = 'play';
+let quizIndex = 0;
+
+const QUIZZES = [
+  { q: '감귤에 가장 많은 비타민은?', opts: ['비타민 A', '비타민 C', '비타민 D'], ans: 1 },
+  { q: '감귤이 가장 많이 나는 대한민국의 섬은?', opts: ['울릉도', '거제도', '제주도'], ans: 2 },
+  { q: '5 + 6 × 2 의 정답은?', opts: ['17', '22', '13'], ans: 0 }
+];
+
+function loadDB() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) return JSON.parse(raw);
+  const init = {
+    users: {
+      '575cmny': { code: '575cmny', nick: '대표관리자 🍊', role: 'super_admin', coins: 99999, suspended: false, lastCheck: '', bio: '감귤창 대표입니다!', bg: '#fff7ed', pets: [], badges: [] }
+    },
+    eggs: [],
+    shopPets: [],
+    events: [],
+    badges: [],
+    notices: [],
+    posts: [],
+    pointLogs: [],
+    gameLogs: []
+  };
+  saveDB(init);
+  return init;
+}
+
+function saveDB(db) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+function switchLoginTab(mode) {
+  currentLoginMode = mode;
+  document.getElementById('loginErr').textContent = '';
+  const mBtn = document.getElementById('tabMember');
+  const aBtn = document.getElementById('tabAdmin');
+  if (mode === 'member') {
+    mBtn.className = 'tab-btn active';
+    aBtn.className = 'tab-btn';
+  } else {
+    mBtn.className = 'tab-btn';
+    aBtn.className = 'tab-btn active admin';
+  }
+}
+
+function tryLogin() {
+  const code = document.getElementById('codeInput').value.trim().toLowerCase();
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!code) { errEl.textContent = '접속 코드를 입력해주세요.'; return; }
+
+  const db = loadDB();
+  const user = db.users[code];
+  if (!user) { errEl.textContent = '존재하지 않는 코드입니다.'; return; }
+  if (user.suspended) { errEl.textContent = '정지된 계정입니다.'; return; }
+
+  if (currentLoginMode === 'member' && user.role !== 'member') {
+    errEl.textContent = '관리자 코드는 위 [👑 관리자] 탭을 눌러 로그인하세요!';
+    return;
+  }
+  if (currentLoginMode === 'admin' && user.role === 'member') {
+    errEl.textContent = '일반 회원 코드는 [🌱 가족 회원] 탭에서만 로그인할 수 있습니다!';
+    return;
+  }
+
+  if (!user.nick) {
+    pendingCode = code;
+    document.getElementById('tabWrap').classList.add('hidden');
+    document.getElementById('codeStep').classList.add('hidden');
+    document.getElementById('nickStep').classList.remove('hidden');
+    return;
+  }
+
+  enterApp(code);
+}
+
+function saveFirstNick() {
+  const nick = document.getElementById('nickInput').value.trim();
+  if (!nick) { document.getElementById('loginErr').textContent = '닉네임을 입력하세요.'; return; }
+  const db = loadDB();
+  db.users[pendingCode].nick = nick;
+  saveDB(db);
+  enterApp(pendingCode);
+}
+
+function enterApp(code) {
+  currentUserCode = code;
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  currentSection = 'play';
+  renderAll();
+}
+
+function logout() {
+  currentUserCode = null;
+  document.getElementById('codeInput').value = '';
+  document.getElementById('nickInput').value = '';
+  document.getElementById('tabWrap').classList.remove('hidden');
+  document.getElementById('codeStep').classList.remove('hidden');
+  document.getElementById('nickStep').classList.add('hidden');
+  document.getElementById('appView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+}
+
+function showPopup(title, sub, img) {
+  document.getElementById('popTitle').textContent = title;
+  document.getElementById('popSub').textContent = sub || '';
+  const imgEl = document.getElementById('popImg');
+  if (img) { imgEl.src = img; imgEl.classList.remove('hidden'); }
+  else { imgEl.classList.add('hidden'); }
+  document.getElementById('popupModal').classList.remove('hidden');
+}
+
+function closePopup() {
+  document.getElementById('popupModal').classList.add('hidden');
+}
+
+function addCoins(db, user, delta, reason) {
+  if (user.coins + delta < 0) return false;
+  user.coins += delta;
+  db.pointLogs.unshift({ nick: user.nick, delta, reason, time: new Date().toLocaleTimeString() });
+  return true;
+}
+
+function readImgFile(inputEl, cb) {
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) { cb(''); return; }
+  const reader = new FileReader();
+  reader.onload = e => cb(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function renderAll() {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  if (!me || me.suspended) { logout(); return; }
+
+  document.getElementById('myCoins').textContent = me.coins.toLocaleString();
+  document.getElementById('myNickDisplay').textContent = me.nick;
+  document.getElementById('roleBadge').textContent =
+    me.role === 'super_admin' ? '👑 대표관리자' : me.role === 'sub_admin' ? '🛠️ 부관리자' : '🌱 가족회원';
+
+  const nBar = document.getElementById('noticeBar');
+  if (db.notices.length > 0) {
+    nBar.classList.remove('hidden');
+    nBar.innerHTML = '📢 <strong>[공지] ' + db.notices[0].title + ':</strong> ' + db.notices[0].content;
+  } else {
+    nBar.classList.add('hidden');
+  }
+
+  const isAdmin = me.role === 'super_admin' || me.role === 'sub_admin';
+  const menus = [
+    { id: 'play', label: '🎮 미니게임·선물상자' },
+    { id: 'shop', label: '🛒 상점 (에그·펫)' },
+    { id: 'events', label: '🎪 이벤트' },
+    { id: 'dex', label: '📖 개인 도감 (펫·뱃지)' },
+    { id: 'rank', label: '🏆 랭킹' },
+    { id: 'board', label: '💬 게시판·공지' },
+    { id: 'profile', label: '🎨 내 프로필·이름변경' }
+  ];
+  if (isAdmin) menus.push({ id: 'admin', label: '⚙️ 관리자 콘솔' });
+
+  const navEl = document.getElementById('mainNav');
+  navEl.innerHTML = menus.map(m =>
+    `<button type="button" class="${currentSection === m.id ? 'active' : ''}" onclick="currentSection='${m.id}'; renderAll();">${m.label}</button>`
+  ).join('');
+
+  const area = document.getElementById('contentArea');
+
+  if (currentSection === 'play') {
+    const q = QUIZZES[quizIndex % QUIZZES.length];
+    area.innerHTML = `
+      <div class="grid">
+        <div class="card">
+          <h3>📅 매일 출석체크 (+10 감귤)</h3>
+          <p style="font-size:13px; color:#6b7280;">하루 한 번 출석하고 10 감귤을 받으세요!</p>
+          <button type="button" class="btn btn-green" style="width:100%;" onclick="doCheckin()">출석 도장 찍기</button>
+        </div>
+        <div class="card">
+          <h3>❓ 상식 퀴즈 (+5 감귤)</h3>
+          <p style="font-weight:bold; font-size:14px;">Q. ${q.q}</p>
+          ${q.opts.map((o, i) => `<button type="button" class="btn btn-blue btn-sm" style="width:100%; margin-bottom:6px;" onclick="answerQuiz(${i})">${i+1}. ${o}</button>`).join('')}
+        </div>
+        <div class="card" style="background:linear-gradient(135deg,#a855f7,#ec4899); color:#fff; border:none;">
+          <h3>🎁 랜덤 선물 상자 (400 감귤)</h3>
+          <p style="font-size:12px; line-height:1.6;">30% 칭찬권 / 30% 일반에그쿠폰<br>20% 500감귤 / 10% 700감귤<br>9% 스페셜쿠폰 / 1% 레인보우에그</p>
+          <button type="button" class="btn" style="width:100%; background:#facc15; color:#4c1d95;" onclick="openGiftBox()">400 감귤로 열기 ✨</button>
+        </div>
+      </div>`;
+  }
+
+  else if (currentSection === 'shop') {
+    let html = '<h2>🥚 펫 에그 상점 <small style="font-size:13px; color:#6b7280;">(까기 전엔 이름만 공개!)</small></h2><div class="grid">';
+    if (db.eggs.length === 0) html += '<div class="card">등록된 에그가 없습니다.</div>';
+    db.eggs.forEach((egg, idx) => {
+      html += `<div class="card" style="text-align:center;">
+        <img src="${egg.img || 'https://placehold.co/120x120/orange/white?text=EGG'}" class="pet-img" />
+        <h3>${egg.name}</h3>
+        <div style="background:#fff7ed; padding:8px; border-radius:12px; font-size:12px; text-align:left; margin-bottom:10px;">
+          ${egg.pets.map(p => `<div>• [${p.grade}] ${p.name} (${p.prob}%)</div>`).join('')}
+        </div>
+        <button type="button" class="btn" style="width:100%;" onclick="hatchEgg(${idx})">${egg.price} 감귤로 부화하기 🐣</button>
+      </div>`;
+    });
+    html += '</div><h2 style="margin-top:28px;">🐾 상점 직구 펫</h2><div class="grid">';
+    if (db.shopPets.length === 0) html += '<div class="card">등록된 상점 펫이 없습니다.</div>';
+    db.shopPets.forEach((sp, idx) => {
+      html += `<div class="card" style="text-align:center;">
+        <img src="${sp.img || 'https://placehold.co/120x120/pink/white?text=PET'}" class="pet-img" />
+        <div><span style="font-size:11px; background:#fce7f3; color:#be185d; padding:2px 8px; border-radius:99px; font-weight:bold;">${sp.grade}</span></div>
+        <h3>${sp.name}</h3>
+        <button type="button" class="btn btn-green" style="width:100%;" onclick="buyShopPet(${idx})">${sp.price} 감귤로 입양</button>
+      </div>`;
+    });
+    html += '</div>';
+    area.innerHTML = html;
+  }
+
+  else if (currentSection === 'events') {
+    if (db.events.length === 0) { area.innerHTML = '<div class="card">진행 중인 이벤트가 없습니다.</div>'; return; }
+    area.innerHTML = db.events.map((ev, eIdx) => `
+      <div class="card" style="margin-bottom:20px; background-color:${ev.bgColor || '#fef3c7'}; background-image:${ev.bgImg ? `url(${ev.bgImg})` : 'none'}; background-size:cover;">
+        <div style="background:rgba(255,255,255,0.9); padding:14px; border-radius:16px; margin-bottom:14px;">
+          <h2 style="margin:0; color:#ea580c;">🎪 ${ev.title}</h2>
+          <p style="margin:4px 0 0; font-size:13px;">${ev.desc || ''}</p>
+        </div>
+        <div class="grid">
+          ${ev.pets.map((ep, pIdx) => `
+            <div class="card" style="text-align:center; padding:14px;">
+              <img src="${ep.img || 'https://placehold.co/100x100/gold/white?text=EVENT'}" class="pet-img" />
+              <h4>${ep.name}</h4>
+              <button type="button" class="btn btn-sm" style="width:100%;" onclick="buyEventPet(${eIdx},${pIdx})">${ep.price} 감귤 입양</button>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  else if (currentSection === 'dex') {
+    let html = `<h2>🐾 내 펫 도감 (${me.pets.length}마리)</h2><div class="grid">`;
+    if (me.pets.length === 0) html += '<div class="card">아직 보유한 펫이 없습니다.</div>';
+    me.pets.forEach(p => {
+      html += `<div class="card" style="text-align:center;">
+        <img src="${p.img || 'https://placehold.co/100x100/orange/white?text=PET'}" class="pet-img" />
+        <div style="margin-top:6px;"><span style="font-size:11px; background:#ffedd5; padding:2px 8px; border-radius:99px; font-weight:bold;">${p.grade}</span></div>
+        <h4 style="margin:6px 0 0;">${p.name}</h4>
+      </div>`;
+    });
+    html += `</div><h2 style="margin-top:28px;">🏅 뱃지 도감 <small style="font-size:13px;">(초록색: 획득 / 회색: 미획득)</small></h2><div class="grid">`;
+    if (db.badges.length === 0) html += '<div class="card">등록된 뱃지가 없습니다.</div>';
+    db.badges.forEach(b => {
+      const owned = me.badges.includes(b.id);
+      html += `<div class="badge-item ${owned ? 'owned' : ''}">
+        <img src="${b.img || 'https://placehold.co/80x80/10b981/white?text=BADGE'}" style="width:64px; height:64px; border-radius:50%; object-fit:cover;" />
+        <h4 style="margin:8px 0 4px;">${b.name}</h4>
+        <span style="font-size:12px; font-weight:bold; color:${owned ? '#059669' : '#6b7280'};">${owned ? '✔ 획득 완료' : '🔒 미획득'}</span>
+      </div>`;
+    });
+    html += '</div>';
+    area.innerHTML = html;
+  }
+
+  else if (currentSection === 'rank') {
+    const users = Object.values(db.users);
+    const byCoin = [...users].sort((a, b) => b.coins - a.coins);
+    const byPet = [...users].sort((a, b) => b.pets.length - a.pets.length);
+    const rareCount = u => u.pets.filter(p => ['희귀','스페셜','레인보우'].includes(p.grade)).length;
+    const byGrade = [...users].sort((a, b) => rareCount(b) - rareCount(a));
+
+    area.innerHTML = `<div class="grid">
+      <div class="card"><h3>🍊 감귤 코인 랭킹</h3>${byCoin.map((u, i) => `<p>${i+1}위. <strong>${u.nick || u.code}</strong> - ${u.coins.toLocaleString()} 감귤</p>`).join('')}</div>
+      <div class="card"><h3>🐾 펫 소유 개수 랭킹</h3>${byPet.map((u, i) => `<p>${i+1}위. <strong>${u.nick || u.code}</strong> - ${u.pets.length}마리</p>`).join('')}</div>
+      <div class="card"><h3>👑 희귀 이상 등급 랭킹</h3>${byGrade.map((u, i) => `<p>${i+1}위. <strong>${u.nick || u.code}</strong> - ${rareCount(u)}마리</p>`).join('')}</div>
+    </div>`;
+  }
+
+  else if (currentSection === 'board') {
+    area.innerHTML = `
+      <div class="card" style="margin-bottom:16px;">
+        <h3>✍️ 가족 게시판 글쓰기</h3>
+        <input type="text" id="postTitle" placeholder="제목" />
+        <textarea id="postBody" rows="3" placeholder="내용을 입력하세요"></textarea>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span style="font-size:13px;">글상자 배경색:</span>
+          <input type="color" id="postColor" value="#ffffff" style="width:50px; height:32px; padding:2px; margin:0;" />
+        </div>
+        <button type="button" class="btn" onclick="createPost()">게시글 등록</button>
+      </div>
+      ${db.posts.map(p => `<div class="card" style="margin-bottom:12px; background:${p.color};">
+        <div style="display:flex; justify-content:space-between;"><strong>${p.title}</strong><span style="font-size:12px; color:#ea580c;">${p.author}</span></div>
+        <p style="margin:8px 0 0; font-size:14px;">${p.body}</p>
+      </div>`).join('')}`;
+  }
+
+  else if (currentSection === 'profile') {
+    area.innerHTML = `
+      <div class="card" style="max-width:500px; margin:0 auto; background:${me.bg || '#fff7ed'};">
+        <h2>🎨 내 프로필 & 이름 변경</h2>
+        <label style="font-size:13px; font-weight:bold;">내 이름 (닉네임 변경)</label>
+        <input type="text" id="profNick" value="${me.nick}" />
+        <label style="font-size:13px; font-weight:bold;">상태 메시지 (텍스트 상자)</label>
+        <textarea id="profBio" rows="3">${me.bio || ''}</textarea>
+        <label style="font-size:13px; font-weight:bold;">프로필 카드 배경색</label>
+        <input type="color" id="profBg" value="${me.bg || '#fff7ed'}" style="width:60px; height:36px; padding:2px;" />
+        <button type="button" class="btn" style="width:100%;" onclick="saveProfile()">이름 & 프로필 저장하기 ✨</button>
+      </div>`;
+  }
+
+  else if (currentSection === 'admin' && isAdmin) {
+    const isSuper = me.role === 'super_admin';
+    let html = '';
+
+    if (isSuper) {
+      html += `<div class="card" style="margin-bottom:20px; border-color:#f59e0b;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <h2 style="margin:0; color:#b45309;">👑 [대표 전용] 회원 코드 발급 & 관리</h2>
+          <div>
+            <button type="button" class="btn btn-sm" onclick="genCode('member')">+ 회원 코드 생성</button>
+            <button type="button" class="btn btn-sm btn-blue" onclick="genCode('sub_admin')">+ 부관리자 코드 생성</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto; margin-top:12px;">
+          <table>
+            <thead><tr><th>코드</th><th>닉네임</th><th>권한</th><th>감귤</th><th>관리</th></tr></thead>
+            <tbody>
+              ${Object.values(db.users).map(u => `<tr>
+                <td><strong>${u.code}</strong></td>
+                <td><input type="text" value="${u.nick}" style="width:110px; margin:0; padding:4px;" onchange="adminRename('${u.code}', this.value)" /></td>
+                <td>${u.role}</td>
+                <td>${u.coins}</td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-green" onclick="adminCoin('${u.code}', 100)">+100</button>
+                  <button type="button" class="btn btn-sm btn-gray" onclick="adminCoin('${u.code}', -100)">-100</button>
+                  ${db.badges.length > 0 ? `<button type="button" class="btn btn-sm btn-blue" onclick="giveBadge('${u.code}')">뱃지수여</button>` : ''}
+                  ${u.code !== '575cmny' ? `
+                    <button type="button" class="btn btn-sm" onclick="toggleSuspend('${u.code}')">${u.suspended ? '복구' : '정지'}</button>
+                    <button type="button" class="btn btn-sm btn-red" onclick="deleteUser('${u.code}')">삭제</button>` : ''}
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="notTitle" placeholder="공지 제목" style="flex:1; margin:0;" />
+          <input type="text" id="notBody" placeholder="공지 내용" style="flex:2; margin:0;" />
+          <button type="button" class="btn btn-sm" onclick="addNotice()">공지 등록</button>
+        </div>
+      </div>`;
+    }
+
+    html += `
+      <div class="grid" style="margin-bottom:20px;">
+        <div class="card">
+          <h3>🥚 새 에그 추가</h3>
+          <input type="text" id="newEggName" placeholder="에그 이름" />
+          <input type="number" id="newEggPrice" placeholder="가격 (감귤)" value="300" />
+          <label style="font-size:12px;">에그 사진:</label>
+          <input type="file" id="newEggImg" accept="image/*" />
+          <hr/>
+          <input type="text" id="epName" placeholder="나올 펫 이름" />
+          <select id="epGrade"><option>일반</option><option>희귀</option><option>스페셜</option><option>레인보우</option></select>
+          <input type="number" id="epProb" placeholder="확률 (%)" value="100" />
+          <label style="font-size:12px;">부화 후 공개될 펫 사진:</label>
+          <input type="file" id="epImg" accept="image/*" />
+          <button type="button" class="btn" style="width:100%;" onclick="addEgg()">에그 저장하기</button>
+        </div>
+
+        <div class="card">
+          <h3>🐾 상점 직구 펫 추가</h3>
+          <input type="text" id="spName" placeholder="펫 이름" />
+          <select id="spGrade"><option>일반</option><option>희귀</option><option>스페셜</option><option>레인보우</option></select>
+          <input type="number" id="spPrice" placeholder="가격 (감귤)" value="500" />
+          <label style="font-size:12px;">펫 사진:</label>
+          <input type="file" id="spImg" accept="image/*" />
+          <button type="button" class="btn btn-green" style="width:100%;" onclick="addShopPet()">상점 펫 저장하기</button>
+
+          <hr style="margin:16px 0;" />
+          <h3>🏅 새 뱃지 만들기</h3>
+          <input type="text" id="bgName" placeholder="뱃지 이름" />
+          <label style="font-size:12px;">뱃지 사진:</label>
+          <input type="file" id="bgImg" accept="image/*" />
+          <button type="button" class="btn btn-blue" style="width:100%;" onclick="addBadge()">뱃지 저장하기</button>
+        </div>
+
+        <div class="card">
+          <h3>🎪 새 이벤트 추가</h3>
+          <input type="text" id="evTitle" placeholder="이벤트 이름" />
+          <input type="text" id="evDesc" placeholder="이벤트 설명" />
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span style="font-size:12px;">배경색:</span>
+            <input type="color" id="evColor" value="#fef3c7" style="width:50px; height:30px; margin:0;" />
+          </div>
+          <label style="font-size:12px;">배경 이미지:</label>
+          <input type="file" id="evBgImg" accept="image/*" />
+          <hr/>
+          <input type="text" id="evPetName" placeholder="이벤트 펫 이름" />
+          <input type="number" id="evPetPrice" placeholder="가격" value="600" />
+          <label style="font-size:12px;">이벤트 펫 사진:</label>
+          <input type="file" id="evPetImg" accept="image/*" />
+          <button type="button" class="btn" style="width:100%;" onclick="addEvent()">이벤트 저장하기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🗑️ 등록된 항목 관리 / 잘못 올린 항목 취소(삭제)</h3>
+        <p style="font-size:13px;"><strong>에그:</strong> ${db.eggs.map((e,i)=>`${e.name} <button type="button" class="btn btn-sm btn-red" onclick="delItem('eggs',${i})">취소(삭제)</button>`).join(' / ') || '없음'}</p>
+        <p style="font-size:13px;"><strong>상점 펫:</strong> ${db.shopPets.map((p,i)=>`${p.name} <button type="button" class="btn btn-sm btn-red" onclick="delItem('shopPets',${i})">취소(삭제)</button>`).join(' / ') || '없음'}</p>
+        <p style="font-size:13px;"><strong>이벤트:</strong> ${db.events.map((e,i)=>`${e.title} <button type="button" class="btn btn-sm btn-red" onclick="delItem('events',${i})">취소(삭제)</button>`).join(' / ') || '없음'}</p>
+        <p style="font-size:13px;"><strong>뱃지:</strong> ${db.badges.map((b,i)=>`${b.name} <button type="button" class="btn btn-sm btn-red" onclick="delItem('badges',${i})">취소(삭제)</button>`).join(' / ') || '없음'}</p>
+        ${isSuper ? `<p style="font-size:13px;"><strong>공지사항:</strong> ${db.notices.map((n,i)=>`${n.title} <button type="button" class="btn btn-sm btn-red" onclick="delItem('notices',${i})">취소(삭제)</button>`).join(' / ') || '없음'}</p>` : ''}
+      </div>`;
+
+    if (isSuper) {
+      html += `<div class="grid" style="margin-top:20px;">
+        <div class="card"><h3>📊 포인트 내역</h3><div style="max-height:180px; overflow:auto; font-size:12px;">${db.pointLogs.map(l=>`<div>${l.nick}: ${l.reason} (${l.delta>=0?'+'+l.delta:l.delta})</div>`).join('')}</div></div>
+        <div class="card"><h3>🎮 게임 기록</h3><div style="max-height:180px; overflow:auto; font-size:12px;">${db.gameLogs.map(l=>`<div>${l.nick}: ${l.detail}</div>`).join('')}</div></div>
+      </div>`;
+    }
+
+    area.innerHTML = html;
+  }
+}
+
+function doCheckin() {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  const today = new Date().toDateString();
+  if (me.lastCheck === today) { alert('오늘은 이미 출석했습니다!'); return; }
+  me.lastCheck = today;
+  addCoins(db, me, 10, '매일 출석 보상');
+  db.gameLogs.unshift({ nick: me.nick, detail: '출석체크 성공 (+10)' });
+  saveDB(db);
+  renderAll();
+  showPopup('📅 출석 완료!', '10 감귤을 획득했습니다!');
+}
+
+function answerQuiz(idx) {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  const q = QUIZZES[quizIndex % QUIZZES.length];
+  if (idx === q.ans) {
+    addCoins(db, me, 5, '상식 퀴즈 정답');
+    db.gameLogs.unshift({ nick: me.nick, detail: '퀴즈 정답 (+5)' });
+    quizIndex++;
+    saveDB(db);
+    renderAll();
+    showPopup('🎉 정답입니다!', '5 감귤을 받았습니다!');
+  } else {
+    alert('틀렸습니다! 다시 도전해보세요.');
+  }
+}
+
+function openGiftBox() {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  if (!addCoins(db, me, -400, '랜덤 선물 상자 개봉')) { alert('감귤 코인이 부족합니다! (400 감귤 필요)'); return; }
+  const r = Math.random() * 100;
+  let reward = '';
+  if (r < 30) reward = '🎟️ 칭찬권 1장!';
+  else if (r < 60) reward = '🥚 펫 에그 쿠폰 (일반)!';
+  else if (r < 80) { reward = '🍊 500 감귤 당첨!'; addCoins(db, me, 500, '선물상자 500 감귤'); }
+  else if (r < 90) { reward = '💰 700 감귤 당첨!'; addCoins(db, me, 700, '선물상자 700 감귤'); }
+  else if (r < 99) reward = '✨ 펫 에그 쿠폰 (스페셜)!';
+  else reward = '🌈 전설의 레인보우 에그 당첨!';
+  db.gameLogs.unshift({ nick: me.nick, detail: '선물상자: ' + reward });
+  saveDB(db);
+  renderAll();
+  showPopup('🎁 선물 상자 결과', reward);
+}
+
+function hatchEgg(idx) {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  const egg = db.eggs[idx];
+  if (!egg || egg.pets.length === 0) return;
+  if (!addCoins(db, me, -egg.price, egg.name + ' 부화')) { alert('감귤 코인이 부족합니다!'); return; }
+  const total = egg.pets.reduce((s, p) => s + Number(p.prob), 0);
+  let rnd = Math.random() * total;
+  let chosen = egg.pets[0];
+  for (const p of egg.pets) {
+    if (rnd < Number(p.prob)) { chosen = p; break; }
+    rnd -= Number(p.prob);
+  }
+  me.pets.push({ name: chosen.name, grade: chosen.grade, img: chosen.img });
+  db.gameLogs.unshift({ nick: me.nick, detail: `에그 부화: [${chosen.grade}] ${chosen.name}` });
+  saveDB(db);
+  renderAll();
+  showPopup(`🐣 [${chosen.grade}] ${chosen.name} 탄생!`, '개인 도감에 자동 등록되었습니다!', chosen.img);
+}
+
+function buyShopPet(idx) {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  const sp = db.shopPets[idx];
+  if (!addCoins(db, me, -sp.price, '상점 펫 입양: ' + sp.name)) { alert('감귤 코인이 부족합니다!'); return; }
+  me.pets.push({ name: sp.name, grade: sp.grade, img: sp.img });
+  saveDB(db);
+  renderAll();
+  showPopup('🐾 펫 입양 완료!', sp.name + '이(가) 도감에 추가되었습니다!', sp.img);
+}
+
+function buyEventPet(eIdx, pIdx) {
+  const db = loadDB();
+  const me = db.users[currentUserCode];
+  const ep = db.events[eIdx].pets[pIdx];
+  if (!addCoins(db, me, -ep.price, '이벤트 펫 입양: ' + ep.name)) { alert('감귤 코인이 부족합니다!'); return; }
+  me.pets.push({ name: ep.name, grade: '스페셜', img: ep.img });
+  saveDB(db);
+  renderAll();
+  showPopup('🎪 이벤트 펫 입양!', ep.name + '이(가) 도감에 추가되었습니다!', ep.img);
+}
+
+function createPost() {
+  const title = document.getElementById('postTitle').value.trim();
+  const body = document.getElementById('postBody').value.trim();
+  const color = document.getElementById('postColor').value;
+  if (!title || !body) return;
+  const db = loadDB();
+  db.posts.unshift({ title, body, color, author: db.users[currentUserCode].nick });
+  saveDB(db);
+  renderAll();
+}
+
+function saveProfile() {
+  const nick = document.getElementById('profNick').value.trim();
+  const bio = document.getElementById('profBio').value;
+  const bg = document.getElementById('profBg').value;
+  if (!nick) { alert('이름을 입력하세요!'); return; }
+  const db = loadDB();
+  db.users[currentUserCode].nick = nick;
+  db.users[currentUserCode].bio = bio;
+  db.users[currentUserCode].bg = bg;
+  saveDB(db);
+  renderAll();
+  alert('이름과 프로필이 저장되었습니다!');
+}
+
+function genCode(role) {
+  const code = Math.random().toString(36).substring(2, 8);
+  const db = loadDB();
+  db.users[code] = { code, nick: '', role, coins: 100, suspended: false, lastCheck: '', bio: '', bg: '#fff7ed', pets: [], badges: [] };
+  saveDB(db);
+  renderAll();
+  alert('새 접속 코드가 생성되었습니다: ' + code);
+}
+
+function adminRename(code, newNick) {
+  if (!newNick.trim()) return;
+  const db = loadDB();
+  db.users[code].nick = newNick.trim();
+  saveDB(db);
+  renderAll();
+}
+
+function adminCoin(code, delta) {
+  const db = loadDB();
+  addCoins(db, db.users[code], delta, '관리자 조정');
+  saveDB(db);
+  renderAll();
+}
+
+function giveBadge(code) {
+  const db = loadDB();
+  const list = db.badges.map((b, i) => `${i+1}. ${b.name}`).join('\n');
+  const pick = prompt('수여할 뱃지 번호를 입력하세요:\n' + list);
+  const idx = Number(pick) - 1;
+  if (db.badges[idx]) {
+    const bId = db.badges[idx].id;
+    if (!db.users[code].badges.includes(bId)) db.users[code].badges.push(bId);
+    saveDB(db);
+    renderAll();
+    alert('뱃지를 수여했습니다!');
+  }
+}
+
+function toggleSuspend(code) {
+  const db = loadDB();
+  db.users[code].suspended = !db.users[code].suspended;
+  saveDB(db);
+  renderAll();
+}
+
+function deleteUser(code) {
+  if (!confirm('정말 삭제하시겠습니까?')) return;
+  const db = loadDB();
+  delete db.users[code];
+  saveDB(db);
+  renderAll();
+}
+
+function addNotice() {
+  const title = document.getElementById('notTitle').value.trim();
+  const content = document.getElementById('notBody').value.trim();
+  if (!title || !content) return;
+  const db = loadDB();
+  db.notices.unshift({ title, content });
+  saveDB(db);
+  renderAll();
+}
+
+function addEgg() {
+  const name = document.getElementById('newEggName').value.trim();
+  const price = Number(document.getElementById('newEggPrice').value) || 300;
+  const pName = document.getElementById('epName').value.trim();
+  const pGrade = document.getElementById('epGrade').value;
+  const pProb = Number(document.getElementById('epProb').value) || 100;
+  if (!name || !pName) { alert('에그 이름과 펫 이름을 입력하세요!'); return; }
+
+  readImgFile(document.getElementById('newEggImg'), eggImg => {
+    readImgFile(document.getElementById('epImg'), petImg => {
+      const db = loadDB();
+      const existing = db.eggs.find(e => e.name === name);
+      if (existing) {
+        existing.pets.push({ name: pName, grade: pGrade, prob: pProb, img: petImg });
+      } else {
+        db.eggs.push({ name, price, img: eggImg, pets: [{ name: pName, grade: pGrade, prob: pProb, img: petImg }] });
+      }
+      saveDB(db);
+      renderAll();
+      alert('에그가 저장되었습니다! (같은 에그 이름으로 다시 추가하면 펫이 한 에그 안에 여러 마리 묶입니다)');
+    });
+  });
+}
+
+function addShopPet() {
+  const name = document.getElementById('spName').value.trim();
+  const grade = document.getElementById('spGrade').value;
+  const price = Number(document.getElementById('spPrice').value) || 500;
+  if (!name) { alert('펫 이름을 입력하세요!'); return; }
+  readImgFile(document.getElementById('spImg'), img => {
+    const db = loadDB();
+    db.shopPets.push({ name, grade, price, img });
+    saveDB(db);
+    renderAll();
+    alert('상점 펫이 저장되었습니다!');
+  });
+}
+
+function addBadge() {
+  const name = document.getElementById('bgName').value.trim();
+  if (!name) { alert('뱃지 이름을 입력하세요!'); return; }
+  readImgFile(document.getElementById('bgImg'), img => {
+    const db = loadDB();
+    db.badges.push({ id: 'b_' + Date.now(), name, img });
+    saveDB(db);
+    renderAll();
+    alert('뱃지가 저장되었습니다!');
+  });
+}
+
+function addEvent() {
+  const title = document.getElementById('evTitle').value.trim();
+  const desc = document.getElementById('evDesc').value.trim();
+  const bgColor = document.getElementById('evColor').value;
+  const pName = document.getElementById('evPetName').value.trim();
+  const pPrice = Number(document.getElementById('evPetPrice').value) || 600;
+  if (!title) { alert('이벤트 이름을 입력하세요!'); return; }
+  readImgFile(document.getElementById('evBgImg'), bgImg => {
+    readImgFile(document.getElementById('evPetImg'), pImg => {
+      const db = loadDB();
+      const pets = pName ? [{ name: pName, price: pPrice, img: pImg }] : [];
+      db.events.push({ title, desc, bgColor, bgImg, pets });
+      saveDB(db);
+      renderAll();
+      alert('이벤트가 저장되었습니다!');
+    });
+  });
+}
+
+function delItem(key, idx) {
+  if (!confirm('정말 취소(삭제)하시겠습니까?')) return;
+  const db = loadDB();
+  db[key].splice(idx, 1);
+  saveDB(db);
+  renderAll();
+}
+</script>
+</body>
+</html>
